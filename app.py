@@ -1,47 +1,30 @@
 import streamlit as st
-import numpy as np
 import joblib
+import numpy as np
 from PIL import Image
+import cv2
 
-# Load model dan scaler
+# Load model & scaler
 model = joblib.load("model_knn.pkl")
 scaler = joblib.load("scaler_knn.pkl")
 
-# Konfigurasi halaman
-st.set_page_config(page_title="Prediksi Kematangan Nanas", layout="wide")
-st.markdown("<h1 style='text-align: center; color: green;'>🍍 Prediksi Kematangan Buah Nanas 🍍</h1>", unsafe_allow_html=True)
-st.markdown("<hr>", unsafe_allow_html=True)
+st.title("Prediksi Kematangan Nanas 🍍")
 
-# Buat dua kolom
-col1, col2 = st.columns([2, 1])
+uploaded_file = st.file_uploader("Upload gambar nanas", type=["jpg", "jpeg", "png"])
 
-with col1:
-    st.subheader("📤 Upload Gambar & Prediksi")
+if uploaded_file is not None:
+    image = Image.open(uploaded_file)
+    st.image(image, caption="Gambar yang diupload", use_column_width=True)
 
-    uploaded_file = st.file_uploader("Pilih gambar buah nanas", type=["jpg", "jpeg", "png"])
-    
-    if uploaded_file is not None:
-        # Baca dan olah gambar
-        image = Image.open(uploaded_file).convert('RGB')
-        img_array = np.array(image)
+    # Resize & konversi ke RGB
+    img = image.resize((100, 100))
+    img_array = np.array(img)
+    avg_rgb = img_array.mean(axis=(0, 1))
+    r, g, b = int(avg_rgb[0]), int(avg_rgb[1]), int(avg_rgb[2])
 
-        # Hitung nilai RGB
-        r = round(np.mean(img_array[:, :, 0]))
-        g = round(np.mean(img_array[:, :, 1]))
-        b = round(np.mean(img_array[:, :, 2]))
-        rgb_input = np.array([[r, g, b]])
-        scaled_input = scaler.transform(rgb_input)
-        pred = model.predict(scaled_input)[0]
+    st.markdown(f"**Nilai RGB**: R={r}, G={g}, B={b}")
 
-        # Tampilkan hasil
-        st.success(f"🎯 Prediksi: **{pred.upper()}**")
-        st.info(f"📊 RGB = 🔴 R: {r}, 🟢 G: {g}, 🔵 B: {b}")
+    sample_scaled = scaler.transform([[r, g, b]])
+    prediksi = model.predict(sample_scaled)[0]
 
-with col2:
-    if uploaded_file is not None:
-        st.subheader("🖼️ Gambar")
-        st.image(image, width=300, caption="Gambar yang diunggah")
-
-# Footer
-st.markdown("<hr>", unsafe_allow_html=True)
-st.markdown("<p style='text-align:center; font-size:12px;'>© 2025 Aplikasi Prediksi Nanas - Dibuat dengan Streamlit</p>", unsafe_allow_html=True)
+    st.markdown(f"### Prediksi Kematangan: **{prediksi.upper()}**")
